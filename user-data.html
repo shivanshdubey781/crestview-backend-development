@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Astro Trading Dashboard</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative; width: 50px; height: 24px; display: inline-block;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: #555; border-radius: 34px; cursor: pointer; transition: .3s;
+    }
+    .slider:before {
+      content: ""; position: absolute; width: 18px; height: 18px;
+      left: 3px; bottom: 3px; background: white;
+      border-radius: 50%; transition: .3s;
+    }
+    input:checked + .slider { background: #22C55E; }
+    input:checked + .slider:before { transform: translateX(26px); }
+
+    /* Edit Modal */
+    #edit-modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center; z-index: 50;
+    }
+    .modal-box {
+      background: #1f2937; padding: 20px; border-radius: 10px; width: 500px; color: white;
+    }
+  </style>
+</head>
+
+<body class="h-full text-gray-300">
+
+  <!-- Redirect if not logged in -->
+  <script>
+    if (!localStorage.getItem("userId")) {
+      window.location.href = "User-login.html";
+    }
+  </script>
+
+  <div class="container mx-auto max-w-5xl p-6">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-white">Astro Trading Dashboard</h1>
+
+      <div class="flex items-center gap-3">
+        <span>Welcome, <span id="userName" class="font-semibold text-white"></span></span>
+        <button onclick="logout()" class="bg-red-600 hover:bg-red-700 px-4 py-1 rounded-md text-white text-sm">
+          Logout
+        </button>
+      </div>
+    </div>
+
+    <!-- Add Account Section -->
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+
+      <h2 class="text-xl font-semibold mb-4">Add Trading Account</h2>
+
+      <p id="account-limit-msg" class="hidden text-yellow-400 mb-4 font-semibold">
+        You have already added your trading account. Only one account is allowed.
+      </p>
+
+      <form id="add-user-form" class="space-y-4">
+
+        <div>
+          <label class="text-sm">Client ID *</label>
+          <input id="clientId" required class="w-full bg-gray-700 p-2 rounded-md" />
+        </div>
+
+        <div>
+          <label class="text-sm">API Key *</label>
+          <input id="apiKey" required class="w-full bg-gray-700 p-2 rounded-md" />
+        </div>
+
+        <div>
+          <label class="text-sm">Secret Key *</label>
+          <input id="secretKey" required class="w-full bg-gray-700 p-2 rounded-md" />
+        </div>
+
+        <div>
+          <label class="text-sm">Password *</label>
+          <input id="password" type="password" required class="w-full bg-gray-700 p-2 rounded-md" />
+        </div>
+
+        <div>
+          <label class="text-sm">M-PIN *</label>
+          <input id="mPin" maxlength="4" required class="w-full bg-gray-700 p-2 rounded-md" />
+        </div>
+
+        <div>
+          <label class="text-sm">Email *</label>
+          <input id="email" type="email" required class="w-full bg-gray-700 p-2 rounded-md" />
+        </div>
+
+        <div>
+          <label class="text-sm">Mobile *</label>
+          <input id="mobile" pattern="[0-9]{10}" required class="w-full bg-gray-700 p-2 rounded-md" />
+        </div>
+
+        <div>
+          <label class="text-sm">TOTP Secret *</label>
+          <input id="totpSecret" required class="w-full bg-gray-700 p-2 rounded-md" />
+        </div>
+
+        <button class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-md font-semibold">
+          Add Trading Account
+        </button>
+
+      </form>
+    </div>
+
+    <!-- Account List Section -->
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg mt-6">
+
+      <h2 class="text-xl font-semibold mb-4">Your Trading Account</h2>
+
+      <div id="user-list-loading">Loading...</div>
+
+      <div id="user-list" class="space-y-3"></div>
+
+    </div>
+  </div>
+
+
+  <!-- Edit Modal -->
+  <div id="edit-modal">
+    <div class="modal-box">
+      <h3 class="text-lg font-semibold mb-4">Edit Trading Account</h3>
+
+      <form id="edit-form" class="space-y-3">
+        <input type="hidden" id="edit-id">
+
+        <input id="edit-clientId" class="w-full bg-gray-700 p-2 rounded-md" />
+        <input id="edit-apiKey" class="w-full bg-gray-700 p-2 rounded-md" />
+        <input id="edit-secretKey" class="w-full bg-gray-700 p-2 rounded-md" />
+        <input id="edit-email" class="w-full bg-gray-700 p-2 rounded-md" />
+        <input id="edit-mobile" class="w-full bg-gray-700 p-2 rounded-md" />
+
+        <div class="flex justify-end gap-2">
+          <button type="button" id="edit-cancel" class="px-4 py-1 bg-gray-600 rounded-md">Cancel</button>
+          <button class="px-4 py-1 bg-green-600 rounded-md">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- SCRIPT -->
+  <script>
+    const API_URL = "http://localhost:5000";
+    let allUsers = [];
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById("userName").textContent = localStorage.getItem("username");
+      await loadUsers();
+    });
+
+    async function loadUsers() {
+      const res = await fetch(`${API_URL}/trading-accounts`);
+      allUsers = await res.json();
+
+      const myId = localStorage.getItem("userId");
+      const myAccount = allUsers.filter(u => u.userId === myId);
+
+      const form = document.getElementById("add-user-form");
+      const msg = document.getElementById("account-limit-msg");
+
+      if (myAccount.length === 1) {
+        form.style.display = "none";
+        msg.classList.remove("hidden");
+      }
+
+      renderUser(myAccount);
+    }
+
+
+    function renderUser(account) {
+      const container = document.getElementById("user-list");
+      const loading = document.getElementById("user-list-loading");
+
+      container.innerHTML = "";
+      loading.style.display = "none";
+
+      if (account.length === 0) {
+        container.innerHTML = "<p class='text-gray-400'>No trading account added yet.</p>";
+        return;
+      }
+
+      const u = account[0];
+
+      container.innerHTML = `
+        <div class="p-4 bg-gray-700 rounded-md">
+          <p><strong>Client ID:</strong> ${u.clientId}</p>
+          <p><strong>Email:</strong> ${u.email}</p>
+
+          <div class="flex justify-between mt-4">
+
+            <label class="switch">
+              <input type="checkbox" id="trade-toggle" ${u.tradeEnabled ? "checked" : ""}>
+              <span class="slider"></span>
+            </label>
+
+            <div class="flex gap-2">
+              <button onclick="editUser('${u._id}')" class="px-3 py-1 bg-indigo-600 rounded text-xs">Edit</button>
+              <button onclick="deleteUser('${u._id}')" class="px-3 py-1 bg-red-600 rounded text-xs">Delete</button>
+            </div>
+
+          </div>
+        </div>
+      `;
+
+      document.getElementById("trade-toggle").addEventListener("change", async (e) => {
+        await fetch(`${API_URL}/trading-accounts/${u._id}/trade-status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tradeEnabled: e.target.checked })
+        });
+      });
+    }
+
+
+    async function deleteUser(id) {
+      if (!confirm("Are you sure you want to delete your trading account?")) return;
+
+      await fetch(`${API_URL}/trading-accounts/${id}`, { method: "DELETE" });
+
+      location.reload();
+    }
+
+
+    async function editUser(id) {
+      const res = await fetch(`${API_URL}/trading-accounts/${id}`);
+      const user = await res.json();
+
+      document.getElementById("edit-id").value = user._id;
+      document.getElementById("edit-clientId").value = user.clientId;
+      document.getElementById("edit-apiKey").value = user.apiKey;
+      document.getElementById("edit-secretKey").value = user.secretKey;
+      document.getElementById("edit-email").value = user.email;
+      document.getElementById("edit-mobile").value = user.mobile;
+
+      document.getElementById("edit-modal").style.display = "flex";
+    }
+
+
+    document.getElementById("edit-cancel").onclick = () => {
+      document.getElementById("edit-modal").style.display = "none";
+    };
+
+
+    document.getElementById("edit-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const id = document.getElementById("edit-id").value;
+
+      const body = {
+        clientId: document.getElementById("edit-clientId").value,
+        apiKey: document.getElementById("edit-apiKey").value,
+        secretKey: document.getElementById("edit-secretKey").value,
+        email: document.getElementById("edit-email").value,
+        mobile: document.getElementById("edit-mobile").value
+      };
+
+      await fetch(`${API_URL}/trading-accounts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      document.getElementById("edit-modal").style.display = "none";
+      await loadUsers();
+    });
+
+
+    document.getElementById("add-user-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const data = {
+        userId: localStorage.getItem("userId"),
+        clientId: clientId.value,
+        apiKey: apiKey.value,
+        secretKey: secretKey.value,
+        password: password.value,
+        mPin: mPin.value,
+        email: email.value,
+        mobile: mobile.value,
+        totpSecret: totpSecret.value,
+        tradeEnabled: false
+      };
+
+      const res = await fetch(`${API_URL}/trading-accounts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert("Trading account added successfully!");
+        location.reload();
+      } else {
+        const j = await res.json();
+        alert(j.message);
+      }
+    });
+
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "User-login.html";
+    }
+  </script>
+
+</body>
+</html>
